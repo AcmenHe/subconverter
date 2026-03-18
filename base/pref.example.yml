@@ -1,5 +1,5 @@
 common:
-  api_mode: false
+  api_mode: true
   api_access_token: password
   default_url: []
   enable_insert: true
@@ -138,7 +138,7 @@ tasks:
 #    timeout: 3
 
 server:
-  listen: 0.0.0.0
+  listen: 127.0.0.1
   port: 25500
   serve_file_root: ""
 

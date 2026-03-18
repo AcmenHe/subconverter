@@ -284,7 +284,8 @@ int main(int argc, char *argv[])
 
         webServer.append_response("GET", "/getlocal", "text/plain;charset=utf-8", [](RESPONSE_CALLBACK_ARGS) -> std::string
         {
-            return fileGet(urlDecode(getUrlArg(request.argument, "path")));
+            // Scope-limit local file reading to prevent arbitrary file disclosure.
+            return fileGet(urlDecode(getUrlArg(request.argument, "path")), true);
         });
     }
 

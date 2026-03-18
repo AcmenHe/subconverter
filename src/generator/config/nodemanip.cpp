@@ -24,7 +24,8 @@ bool applyMatcher(const std::string &rule, std::string &real_rule, const Proxy &
 
 int explodeConf(const std::string &filepath, std::vector<Proxy> &nodes)
 {
-    return explodeConfContent(fileGet(filepath), nodes);
+    // Keep local file loading scoped to reduce information disclosure risk.
+    return explodeConfContent(fileGet(filepath, true), nodes);
 }
 
 void copyNodes(std::vector<Proxy> &source, std::vector<Proxy> &dest)
@@ -133,7 +134,7 @@ int addNodes(std::string link, std::vector<Proxy> &allNodes, int groupID, parse_
         linkType = ConfType::SUB;
     else if(startsWith(link, "Netch://"))
         linkType = ConfType::Netch;
-    else if(fileExist(link))
+    else if(fileExist(link, true))
         linkType = ConfType::Local;
 
     switch(linkType)

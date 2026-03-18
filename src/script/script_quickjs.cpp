@@ -19,6 +19,37 @@
 
 std::string parseProxy(const std::string &source);
 
+// QuickJS scripts should not be able to read/write arbitrary files.
+// We enforce the same scope rules as fileGet(path, true).
+static inline bool script_path_in_scope(const std::string &path)
+{
+#ifdef _WIN32
+    // Disallow absolute Windows paths and directory traversal.
+    if(path.find(":\\") != path.npos || path.find("..") != path.npos)
+        return false;
+    return true;
+#else
+    // Disallow absolute POSIX paths and directory traversal.
+    if(!path.empty() && path[0] == '/')
+        return false;
+    if(path.find("..") != path.npos)
+        return false;
+    return true;
+#endif
+}
+
+static inline std::string scoped_fileGet(const std::string &path)
+{
+    return fileGet(path, true);
+}
+
+static inline int scoped_fileWrite(const std::string &path, const std::string &content, bool overwrite)
+{
+    if(!script_path_in_scope(path))
+        return -1;
+    return fileWrite(path, content, overwrite);
+}
+
 static const std::string qjs_require_module {R"(import * as std from 'std'
 import * as os from 'os'
 
@@ -175,6 +206,10 @@ export function require (path) {
 		debug('require# Calling from main script')
 	} else {
 		debug(`require# Calling from ${__filename} parent module`)
+	}
+	// Prevent reading arbitrary files via absolute paths or path traversal.
+	if (path.startsWith('/') || path.includes('..') || /^[A-Za-z]:\\/.test(path)) {
+		throw new Error(`Refused to load module out of scope: ${path}`)
 	}
 	let _path = _lookupModule(path)
 
@@ -509,8 +544,8 @@ int script_context_init(qjs::Context &context)
             .add<&sleepMs>("sleep")
             .add<&ShowMsgbox>("msgbox")
             .add<&qjs_getUrlArg>("getUrlArg")
-            .add<&fileGet>("fileGet")
-            .add<&fileWrite>("fileWrite");
+            .add<&scoped_fileGet>("fileGet")
+            .add<&scoped_fileWrite>("fileWrite");
         context.eval(R"(
         import * as interUtils from 'interUtils'
         globalThis.Request = interUtils.Request
